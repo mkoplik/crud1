@@ -67,9 +67,9 @@
                 var $clickedElement = $(this);
 
                 $.ajax({
-                    url: "vendor/delete.php",
-                    type: "POST",
-                    data: { id: productId },
+                    url: "vendor/delete.php?id=" + productId,
+                    type: "DELETE",
+                    // data: { id: productId },
                     dataType: "json", 
                     success: function(response) {
                         console.log("Ответ сервера:", response);
@@ -89,4 +89,4 @@
     </script>
 </body>
 </html>
-<!-- <h1>проверочка2</h1> -->
+
