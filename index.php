@@ -18,6 +18,8 @@
     td {
         background: #b5b5b5;
     }
+  
+
 </style>
 <body>
     <table>
@@ -33,17 +35,33 @@
             require_once 'config/connect.php';
 
             $products = mysqli_query($connect, "SELECT * FROM `products`");
-            $products = mysqli_fetch_all($products);
-            foreach ($products as $product) {
+            $productsArray = array();
+
+            while ($product = mysqli_fetch_assoc($products)) {
+                $productsArray[] = $product;
+            }
+
+            foreach ($productsArray as $product) {
+                $id = $product['id'];
+                $title = $product['title'];
+                $price = $product['price'];
+                $description = $product['description'];
+            
+
                 ?>
                 
                 <tr>
-                    <td><?php echo $product[0] ?></td>
-                    <td><?php echo  $product[1] ?></td>
-                    <td><?php echo $product[3] ?></td>
-                    <td><?php echo $product[2] ?></td>
-                    <td><a href="update.php?id=<?php echo  $product[0] ?>">Update</a></td>
-                    <td><a class="deleteProduct" style="color: red; cursor: pointer;" data-id="<?php echo $product[0] ?>">Delete</a></td>
+                    <td><?php echo $id ?></td>
+                    <td contenteditable="true"><?php echo $title ?></td>
+                    <td contenteditable="true"><?php echo $description ?></td>
+                    <td contenteditable="true"><?php echo $price ?></td>
+                    <td style="cursor: pointer; color:blue" class="updateProduct" data-id="<?php echo $id ?>">
+                        <span   class="update">Update</span> 
+                        <span  data-id="<?php echo $id ?>"  class="save" style="display: none;">Save</span>
+                    </td>
+                    <td><a class="deleteProduct" style="color: red; cursor: pointer;" data-id="<?php
+                     echo $id ?>">Delete</a>
+                    </td>
                 </tr>
                 <?php
             }
@@ -61,14 +79,68 @@
     </form>
 
     <script>
+
         $(document).ready(function() {
+            $(".updateProduct").click(function() {
+                var $clickedElement = $(this);
+                var $row = $clickedElement.closest("tr"); // находим ближайшую строку
+                var productId = $row.find("td:first").text(); //получаем id из первой ячейки строки
+                var title = $row.find("td:nth-child(2)").text();//получаем title
+                var price = $row.find("td:nth-child(4)").text();//получаем price
+                var description = $row.find("td:nth-child(3)").text(); //получаем description
+
+
+            
+                
+                $row.find(".update").hide();
+                $row.find(".save").show();
+
+                            
+
+            
+            $(".save").click(function () {
+                var formData = {
+                    "id": productId,
+                    "title": title,
+                    "price": price,
+                    "description": description
+                };
+              
+            
+                
+                $.ajax({
+                    type: "POST",
+                    url: "vendor/update.php",
+                    data: {
+                        _method: "PUT",
+                       ...formData
+                    },
+                    dataType: "json", 
+                    success: function (response) {
+                        // Обновляем данные на странице
+                        if (response.success) {
+                            alert("Product updated successfully!");
+                            window.location.href = "index.php";
+                        
+                        } else {
+                            alert("Error updating product.");
+                        }
+                    },
+                    error: function () {
+                        alert("Error: Unable to update product.");
+                    }
+                });
+            });
+
+        });
+
             $(".deleteProduct").click(function() {
                 var productId = $(this).data("id");
                 var $clickedElement = $(this);
 
                 $.ajax({
-                    url: "vendor/delete.php",
-                    type: "POST",
+                    url: "vendor/delete.php?id=" + productId,
+                    type: "DELETE",
                     data: { id: productId },
                     dataType: "json", 
                     success: function(response) {
@@ -88,4 +160,6 @@
         });
     </script>
 </body>
+
 </html>
+
