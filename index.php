@@ -18,8 +18,6 @@
     td {
         background: #b5b5b5;
     }
-  
-
 </style>
 <body>
     <table>
@@ -32,8 +30,13 @@
             <th>&#10006;</th>
         </tr>
         <?php
+           
             require_once 'config/connect.php';
+            if (!$connect) {
+                die("Connection failed: " . mysqli_connect_error());
+            }
 
+            
             $products = mysqli_query($connect, "SELECT * FROM `products`");
             $productsArray = array();
 
@@ -46,94 +49,108 @@
                 $title = $product['title'];
                 $price = $product['price'];
                 $description = $product['description'];
-            
 
                 ?>
-                
                 <tr>
                     <td><?php echo $id ?></td>
                     <td contenteditable="true"><?php echo $title ?></td>
                     <td contenteditable="true"><?php echo $description ?></td>
                     <td contenteditable="true"><?php echo $price ?></td>
                     <td style="cursor: pointer; color:blue" class="updateProduct" data-id="<?php echo $id ?>">
-                        <span   class="update">Update</span> 
+                        <span   class="update">Update</span>
                         <span  data-id="<?php echo $id ?>"  class="save" style="display: none;">Save</span>
                     </td>
-                    <td><a class="deleteProduct" style="color: red; cursor: pointer;" data-id="<?php
-                     echo $id ?>">Delete</a>
-                    </td>
+                    <td><a class="deleteProduct" style="color: red; cursor: pointer;" data-id="<?php echo $id ?>">Delete</a></td>
                 </tr>
                 <?php
             }
         ?>
     </table>
     <h3>Add new product</h3>
-    <form action="vendor/create.php"  method="post">
+    <form action="vendor/create.php" method="post">
         <p>Title</p>
         <input type="text"  name="title">
         <p>Description</p>
         <textarea name="description"></textarea>
         <p>Price</p>
         <input type="number"  name="price"> <br>  <br>
-        <button type="submit">Add new product</button>
+        <button type="button" id="addProductButton">Add new product</button>
     </form>
 
     <script>
-
         $(document).ready(function() {
-            $(".updateProduct").click(function() {
-                var $clickedElement = $(this);
-                var $row = $clickedElement.closest("tr"); // находим ближайшую строку
-                var productId = $row.find("td:first").text(); //получаем id из первой ячейки строки
-                var title = $row.find("td:nth-child(2)").text();//получаем title
-                var price = $row.find("td:nth-child(4)").text();//получаем price
-                var description = $row.find("td:nth-child(3)").text(); //получаем description
-
-
-            
-                
-                $row.find(".update").hide();
-                $row.find(".save").show();
-
-                            
-
-            
-            $(".save").click(function () {
+            // Обработчик кнопки "Add new product"
+            $("#addProductButton").click(function() {
                 var formData = {
-                    "id": productId,
-                    "title": title,
-                    "price": price,
-                    "description": description
+                    title: $("input[name='title']").val(),
+                    description: $("textarea[name='description']").val(),
+                    price: $("input[name='price']").val()
                 };
-              
-            
-                
+
                 $.ajax({
                     type: "POST",
-                    url: "vendor/update.php",
-                    data: {
-                        _method: "PUT",
-                       ...formData
-                    },
-                    dataType: "json", 
-                    success: function (response) {
-                        // Обновляем данные на странице
+                    url: "vendor/create.php",
+                    data: formData,
+                    dataType: "json",
+                    success: function(response) {
                         if (response.success) {
-                            alert("Product updated successfully!");
-                            window.location.href = "index.php";
-                        
+                            alert("Product added successfully!");
+                            location.reload(); // Перезагрузка страницы для отображения нового продукта
                         } else {
-                            alert("Error updating product.");
+                            alert("Error adding product.");
                         }
                     },
-                    error: function () {
-                        alert("Error: Unable to update product.");
+                    error: function() {
+                        alert("Error: Unable to add product.");
                     }
                 });
             });
 
-        });
+            // Обработчик для обновления продукта
+            $(".updateProduct").click(function() {
+                var $clickedElement = $(this);
+                var $row = $clickedElement.closest("tr");
+                var productId = $row.find("td:first").text();
+                var title = $row.find("td:nth-child(2)").text();
+                var price = $row.find("td:nth-child(4)").text();
+                var description = $row.find("td:nth-child(3)").text();
 
+                $row.find(".update").hide();
+                $row.find(".save").show();
+
+                
+                $(".save").click(function () {
+                    var formData = {
+                        "id": productId,
+                        "title": title,
+                        "price": price,
+                        "description": description
+                    };
+
+                    $.ajax({
+                        type: "POST",
+                        url: "vendor/update.php",
+                        data: {
+                            _method: "PUT",
+                            ...formData
+                        },
+                        dataType: "json",
+                        success: function (response) {
+                            if (response.success) {
+                                alert("Product updated successfully!");
+                                window.location.href = "index.php";
+                            } else {
+                                alert("Error updating product.");
+                            }
+                        },
+                        error: function () {
+                            alert("Error: Unable to update product.");
+                        }
+                    });
+                });
+            });
+
+            // Обработчик для удаления продукта
             $(".deleteProduct").click(function() {
                 var productId = $(this).data("id");
                 var $clickedElement = $(this);
@@ -142,24 +159,22 @@
                     url: "vendor/delete.php?id=" + productId,
                     type: "DELETE",
                     data: { id: productId },
-                    dataType: "json", 
+                    dataType: "json",
                     success: function(response) {
-                        console.log("Ответ сервера:", response);
                         if (response.status === "success") {
-                            console.log(response.message);
+                            alert(response.message);
                             $clickedElement.closest("tr").remove();
                         } else {
                             console.error(response.message);
                         }
                     },
                     error: function(xhr, status, error) {
-                        console.error("Ошибка при удалении продукта:", error);
+                        console.error("Error deleting product:", error);
                     }
                 });
             });
         });
     </script>
 </body>
-
 </html>
 
